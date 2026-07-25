@@ -11,6 +11,7 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 async def runs_create(
     request: RunCreateRequest,
     service: RunService = Depends(get_run_service),
+    # user: CurrentUser = Depends(get_current_user),
 ) -> RunCreateResponse:
     """创建 Run（支持幂等键去重）。"""
     return await service.create_run(request)

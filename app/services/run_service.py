@@ -32,17 +32,17 @@ class RunService:
 
     async def create_run(self, request: RunCreateRequest) -> RunCreateResponse:
         """创建 run；同一 org 下相同幂等键返回已有记录。"""
-        existing = await self._repository.get_by_idempotency_key(
-            request.org_id,
-            request.idempotency_key,
-        )
-        if existing is not None:
-            return RunCreateResponse(
-                run_id=existing.id,
-                status=RunStatus(existing.status),
-                run_type=existing.run_type,
-                created_at=existing.created_at,
-            )
+        # existing = await self._repository.get_by_idempotency_key(
+        #     request.org_id,
+        #     request.idempotency_key,
+        # )
+        # if existing is not None:
+        #     return RunCreateResponse(
+        #         run_id=existing.id,
+        #         status=RunStatus(existing.status),
+        #         run_type=existing.run_type,
+        #         created_at=existing.created_at,
+        #     )
 
         run = AgentRuns(
             id=str(uuid4()),

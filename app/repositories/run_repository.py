@@ -1,5 +1,6 @@
-"""AgentRuns 数据访问层（方法体由业务侧自行实现）。"""
+"""AgentRuns 数据访问层。"""
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AgentRuns
@@ -13,11 +14,19 @@ class RunRepository:
 
     async def create(self, run: AgentRuns) -> AgentRuns:
         """插入一条 run，并 flush 以拿到数据库默认值。"""
-        raise NotImplementedError
+        self._session.add(run)
+        await self._session.flush()
+        await self._session.refresh(run)
+        return run
 
     async def get_by_id(self, org_id: str, run_id: str) -> AgentRuns | None:
         """按租户 + run_id 查询。"""
-        raise NotImplementedError
+        stmt = select(AgentRuns).where(
+            AgentRuns.org_id == org_id,
+            AgentRuns.id == run_id,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_by_idempotency_key(
         self,
@@ -25,4 +34,9 @@ class RunRepository:
         idempotency_key: str,
     ) -> AgentRuns | None:
         """按租户 + 幂等键查询（用于创建去重）。"""
-        raise NotImplementedError
+        stmt = select(AgentRuns).where(
+            AgentRuns.org_id == org_id,
+            AgentRuns.idempotency_key == idempotency_key,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
