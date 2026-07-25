@@ -24,7 +24,5 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# 本地提示词
-prompt/
-
+# Cursor
 .cursor/

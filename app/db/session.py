@@ -20,6 +20,11 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """请求级数据库会话，供 FastAPI Depends 注入。"""
+    """请求级数据库会话，供 FastAPI Depends 注入；成功则提交，失败则回滚。"""
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

@@ -1,19 +1,26 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.schemas.run_schema import RunCreateRequest
+from app.api.deps import get_run_service
+from app.schemas.run_schema import RunCreateRequest, RunCreateResponse, RunGetRequest
+from app.services.run_service import RunService
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def runs_create(request: RunCreateRequest) -> dict:
-    """创建 Run（业务未实现）。"""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="尚未实现")
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=RunCreateResponse)
+async def runs_create(
+    request: RunCreateRequest,
+    service: RunService = Depends(get_run_service),
+) -> RunCreateResponse:
+    """创建 Run（支持幂等键去重）。"""
+    return await service.create_run(request)
 
 
-@router.get("/{run_id}")
-async def runs_get(run_id: str) -> dict:
-    """查询 Run（业务未实现）。"""
+@router.get("/{run_id}", response_model=RunGetRequest)
+async def runs_get(
+    request: RunGetRequest,
+) -> RunGetRequest:
+    """查询 Run。"""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="尚未实现")
 
 

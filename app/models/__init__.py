@@ -1,5 +1,8 @@
 """ORM 模型包。
 
-新增模型后在此导入，确保 Alembic autogenerate 能发现表结构：
-    from app.models.xxx import Xxx
+新增模型后在此导入，确保 Alembic autogenerate 能发现表结构。
 """
+
+from app.models.run_model import AgentRuns
+
+__all__ = ["AgentRuns"]

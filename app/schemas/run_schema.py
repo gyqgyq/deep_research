@@ -13,6 +13,8 @@ class RunCreateRequestInput(BaseModel):
 
 class RunCreateRequest(BaseModel):
     """创建agent任务请求"""
+    org_id: str = Field(..., description="组织ID（租户隔离）")
+    user_id: str = Field(..., description="用户ID")
     run_type: str = Field(..., description="任务类型")
     idempotency_key: str = Field(..., description="幂等性键")
     input: RunCreateRequestInput = Field(..., description="输入参数")
