@@ -1,0 +1,209 @@
+# Alembic 数据库迁移说明
+
+## 是什么
+
+Alembic 是 SQLAlchemy 官方的**数据库结构版本管理工具**。
+
+业务代码里用 Model 描述「表应该长什么样」；Alembic 负责：
+
+1. 对比「当前 Model」和「数据库真实结构」的差异
+2. 生成迁移脚本（一串可执行的建表 / 改表 / 删列操作）
+3. 把脚本应用到 PostgreSQL（也可回滚）
+
+可以把它理解成：**数据库结构的 Git**——每次表结构变更都有记录，团队和环境可以保持一致。
+
+本项目使用 **异步** 配置（asyncpg），连接串来自 `.env` 中的 `ASYNC_DATABASE_URL`，由 `env.py` 在运行时注入，无需改 `alembic.ini` 里的占位 URL。
+
+---
+
+## 目录结构
+
+```text
+backend/
+├── alembic.ini          # Alembic 主配置（脚本路径、日志等）
+└── alembic/
+    ├── README           # 本说明
+    ├── env.py           # 迁移运行环境：读 Settings、挂载 Base.metadata
+    ├── script.py.mako   # 生成迁移文件时用的模板
+    └── versions/        # 存放每一份迁移脚本（*.py）
+```
+
+| 文件 / 目录 | 作用 |
+|-------------|------|
+| `alembic.ini` | 全局配置，例如 `script_location`、日志级别 |
+| `env.py` | 真正连库、指定 `target_metadata = Base.metadata` |
+| `versions/` | 历史迁移脚本；一般只新增，不随意改已上线的文件 |
+| `script.py.mako` | 新建 revision 时的代码模板，通常不用改 |
+
+---
+
+## 和项目其它部分的关系
+
+```text
+app/models/*.py     → 定义表结构（继承 app.db.base.Base）
+app/models/__init__.py → 导入各 Model，供 autogenerate 发现
+app/db/base.py      → DeclarativeBase
+app/core/settings.py → 提供 ASYNC_DATABASE_URL
+alembic/env.py      → 读取上述配置并执行迁移
+PostgreSQL（云库）  → 最终被 upgrade 修改的目标
+```
+
+**注意：**
+
+- 只改 Model、不跑迁移 → 数据库结构不会变
+- 只跑迁移、Model 没导入到 `app.models` → autogenerate 可能发现不了新表
+- 应用运行（uvicorn）**不依赖**每次启动都跑迁移；迁移是单独命令，部署时执行
+
+---
+
+## 使用前准备
+
+1. 已配置 `.env`（可参考 `.env.example`）
+2. `ASYNC_DATABASE_URL` 可连通云 PostgreSQL（白名单已放行）
+3. 在项目根目录 `backend/` 下执行命令（与 `alembic.ini` 同级）
+4. 已有至少一个继承 `Base` 的 Model，并在 `app/models/__init__.py` 中导入
+
+示例（概念）：
+
+```python
+# app/models/user.py
+from sqlalchemy.orm import Mapped, mapped_column
+from app.db.base import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+```
+
+```python
+# app/models/__init__.py
+from app.models.user import User  # 必须导入，autogenerate 才能看到
+```
+
+---
+
+## 常用操作步骤
+
+以下命令均在 `backend/` 目录执行，建议用 `uv run`。
+
+### 1. 查看当前数据库迁移版本
+
+```bash
+uv run alembic current
+```
+
+- 无输出或显示未初始化：说明还没执行过 `upgrade`
+- 有 revision id：表示库已应用到该版本
+
+查看历史：
+
+```bash
+uv run alembic history
+```
+
+### 2. 根据 Model 自动生成迁移脚本
+
+修改 / 新增 Model 后：
+
+```bash
+uv run alembic revision --autogenerate -m "创建 users 表"
+```
+
+会在 `alembic/versions/` 下生成类似：
+
+```text
+xxxx_创建_users_表.py
+```
+
+**生成后务必人工检查脚本**：autogenerate 很有用，但不完美（重命名列、约束、数据迁移等有时需要手改）。
+
+### 3. 手动新建空迁移（可选）
+
+不适合自动检测时（例如纯数据修正、复杂约束）：
+
+```bash
+uv run alembic revision -m "补充索引"
+```
+
+然后自己在生成的文件里写 `upgrade()` / `downgrade()`。
+
+### 4. 应用到数据库（升级到最新）
+
+```bash
+uv run alembic upgrade head
+```
+
+- `head`：最新一版
+- 也可指定版本：`uv run alembic upgrade <revision_id>`
+
+首次执行时，Alembic 会在库中创建 `alembic_version` 表，用来记录当前版本号。
+
+### 5. 回滚（降级）
+
+回退一个版本：
+
+```bash
+uv run alembic downgrade -1
+```
+
+回退到指定版本：
+
+```bash
+uv run alembic downgrade <revision_id>
+```
+
+回退全部（慎用，会按脚本拆掉结构）：
+
+```bash
+uv run alembic downgrade base
+```
+
+生产环境回滚前务必备份，并确认 `downgrade()` 写得正确。
+
+### 6. 推荐日常工作流
+
+```text
+1. 修改 app/models/
+2. 在 app/models/__init__.py 导入新模型
+3. uv run alembic revision --autogenerate -m "简明中文描述"
+4. 打开 versions/ 下新文件，检查 upgrade/downgrade
+5. uv run alembic upgrade head
+6. 本地验证 / 再部署到其它环境执行同样的 upgrade
+```
+
+多人协作时：**迁移脚本要提交到 Git**，其它人拉取后执行 `upgrade head` 即可对齐库结构。
+
+---
+
+## 迁移脚本里有什么
+
+每个 `versions/*.py` 通常包含：
+
+- `revision` / `down_revision`：版本链表（谁接在谁后面）
+- `upgrade()`：向前变更（建表、加列等）
+- `downgrade()`：向后撤销（尽量与 upgrade 对称）
+
+不要随意改已经在生产执行过的脚本；若发现错误，应**再新建一份**迁移来修正。
+
+---
+
+## 常见问题
+
+| 现象 | 可能原因 | 处理 |
+|------|----------|------|
+| autogenerate 生成空脚本 | Model 未导入；或库已与 Model 一致 | 检查 `app/models/__init__.py`；确认连的是目标库 |
+| 连接失败 | URL / 白名单 / SSL | 检查 `.env`、云控制台网络安全 |
+| `Target database is not up to date` | 本地还有未执行的迁移 | 先 `upgrade head` 再生成新 revision |
+| 与线上结构冲突 | 有人手改过库或漏跑迁移 | `alembic current` + `history` 对齐后再处理 |
+
+---
+
+## 和「启动应用」的区别
+
+| | uvicorn 启动 API | Alembic 迁移 |
+|--|------------------|--------------|
+| 目的 | 跑业务接口 | 变更表结构 |
+| 是否每次启动执行 | 否（本项目启动只做连通性检查） | 否，需要时手动或在部署流水线执行 |
+| 命令 | `uv run uvicorn app.main:app --reload` | `uv run alembic upgrade head` |
+
+当前若还没有业务 Model，**不必执行迁移**；等第一张表设计完成后再按上面步骤操作即可。

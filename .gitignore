@@ -1,4 +1,4 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
@@ -6,9 +6,20 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
+# 虚拟环境
 .venv
 
+# 本地密钥（勿提交）
 .env
 
-.cursor
+# IDE / 编辑器
+.idea/
+.vscode/
+*.swp
+
+# 测试与覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

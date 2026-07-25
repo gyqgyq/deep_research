@@ -1,0 +1,42 @@
+---
+description: 目录与代码遵循生产环境最佳实践
+alwaysApply: true
+---
+
+# 生产环境实践
+
+本项目的目录、代码、配置须按生产可用标准组织，避免演示级/临时写法。
+
+## 目录分层（保持现有约定）
+
+```text
+app/
+  api/           # HTTP：deps、v1 路由，不写业务与 SQL
+  core/          # settings、logging 等横切能力
+  db/            # engine、session、Base
+  models/        # SQLAlchemy ORM
+  schemas/       # Pydantic 入参/出参
+  services/      # 业务逻辑
+  repositories/  # 数据访问
+  enums/ utils/
+  main.py        # create_app 工厂 + lifespan
+alembic/         # 数据库迁移（表结构变更走迁移，不靠启动时 create_all）
+```
+
+- 新接口放在 `app/api/v1/`，经 `api/v1/router.py` 挂到 `/api/v1`
+- 不要恢复或并行维护旧的 `app/routers/` 与 `api/` 双轨
+- 配置用 `app/core/settings.py`（`BaseSettings` + `.env`），密钥不入库
+
+## 代码约定
+
+- 使用应用工厂 `create_app()`；依赖注入经 `app/api/deps.py`（如 `get_db`）
+- 异步栈：SQLAlchemy asyncio + asyncpg；会话请求级创建/释放
+- 路由薄、逻辑在 service、SQL 在 repository；未实现接口返回明确状态（如 501），勿用假数据冒充成功响应
+- 结构变更用 Alembic；启动 lifespan 只做连通性检查与资源释放，不做迁表
+- 注释/docstring 用中文（见 chinese-comments 规则）；标识符保持英文
+- 不引入与当前需求无关的过度抽象；新增文件应落入上述分层
+
+## 文档与环境
+
+- 变更启动方式、环境变量、迁移流程时同步更新 `README.md` / `.env.example`
+- `.env` 仅本地；示例值只写占位符

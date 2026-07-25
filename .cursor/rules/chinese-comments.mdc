@@ -1,0 +1,18 @@
+---
+description: 代码注释使用中文
+alwaysApply: true
+---
+
+# 注释语言
+
+- 新增或修改代码时，注释（含 docstring）一律使用简体中文
+- 不要写英文注释，除非引用外部 API/库的专有名词必须保留原文
+- 标识符（变量名、函数名、类名）仍可按项目既有英文命名风格
+
+```python
+# ❌ BAD
+# Normalize database URL for asyncpg
+
+# ✅ GOOD
+# 将数据库 URL 规范为 asyncpg 可用形式
+```
