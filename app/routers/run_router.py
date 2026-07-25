@@ -1,11 +1,27 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.schemas.run_schema import (
+    RunCreateRequest, 
+    RunCreateResponse,
+    RunGetRequest, 
+    RunGetResponse,
+    RunCancelRequest, 
+    RunCancelResponse,
+    RunResumeRequest,
+    RunResumeResponse,
+    RunTraceRequest,
+    RunTraceResponse
+)
+from app.utils.hash import string2hash
 
 
 router = APIRouter()
 
-@router.post("/runs")
-async def runs_create():
-    return {"msg": "Hello FastAPI with uv"}
+@router.post("/runs", response_model=RunCreateResponse, status_code=201)
+async def runs_create(
+    request: RunCreateRequest,
+):
+    return {}
 
 @router.get("/runs/{run_id}")
 async def runs_get(run_id: str):
