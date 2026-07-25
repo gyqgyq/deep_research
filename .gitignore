@@ -23,3 +23,8 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# 本地提示词
+prompt/
+
+.cursor/
