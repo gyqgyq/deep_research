@@ -93,8 +93,13 @@ async def get_current_user(
     return user
 
 
+# 路由参数注解：user: CurrentUser，无需再写 Depends(get_current_user)
+CurrentUser = Annotated[Users, Depends(get_current_user)]
+
+
 __all__ = [
     "REFRESH_COOKIE_NAME",
+    "CurrentUser",
     "get_db",
     "get_redis",
     "get_user_repository",

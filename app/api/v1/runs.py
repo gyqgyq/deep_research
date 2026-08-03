@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from app.api.deps import get_run_service
+from app.api.deps import CurrentUser, get_run_service
 from app.schemas.run_schema import RunCreateRequest, RunCreateResponse, RunGetResponse
 from app.services.run_service import RunService
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 async def runs_create(
     request: RunCreateRequest,
     service: RunService = Depends(get_run_service),
-    # user: CurrentUser = Depends(get_current_user),
+    # user: CurrentUser,
 ) -> RunCreateResponse:
     """创建 Run（支持幂等键去重）。"""
     return await service.create_run(request)
@@ -19,11 +19,12 @@ async def runs_create(
 
 @router.get("/{run_id}", response_model=RunGetResponse)
 async def runs_get(
+    user: CurrentUser,
     run_id: str = Path(..., description="任务ID"),
     service: RunService = Depends(get_run_service),
 ) -> RunGetResponse:
     """查询 Run。"""
-    return await service.get_run(run_id)
+    return await service.get_run(user.org_id, run_id)
 
 
 @router.get("/{run_id}/events")

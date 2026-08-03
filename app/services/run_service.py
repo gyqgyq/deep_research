@@ -76,10 +76,12 @@ class RunService:
             created_at=created.created_at,
         )
 
-    async def get_run(self, run_id: str) -> RunGetResponse:
-        """按 run_id 查询 run，不存在则 NotFoundError。"""
+    async def get_run(self, org_id: str, run_id: str) -> RunGetResponse:
+        """按租户 + run_id 查询"""
         run = await self._repository.get_run_by_id(run_id)
-        if run is None:
+
+        # 无权限也返回 404，避免泄露其他组织的 run_id 是否存在
+        if run is None or run.org_id != org_id:
             raise NotFoundError("run 不存在")
 
         input_data = run.input_json or {}
