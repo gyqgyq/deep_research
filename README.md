@@ -32,6 +32,7 @@ cp .env.example .env
 
 ```bash
 uv sync
+source .venv/Scripts/activate # git bash
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
