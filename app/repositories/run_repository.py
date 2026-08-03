@@ -19,10 +19,11 @@ class RunRepository:
         await self._session.refresh(run)
         return run
 
-    async def get_run_by_id(self, run_id: str) -> AgentRuns | None:
-        """按 run_id 查询。"""
+    async def get_run_by_id_and_org(self, run_id: str, org_id: str) -> AgentRuns | None:
+        """按 run_id + 租户查询。org_id是租户隔离条件，防止拿别人的run"""
         stmt = select(AgentRuns).where(
             AgentRuns.id == run_id,
+            AgentRuns.org_id == org_id,
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
