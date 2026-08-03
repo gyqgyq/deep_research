@@ -9,8 +9,8 @@ alwaysApply: true
 
 ```text
 api → services → repositories → models → db.base
-         ↘ agents / schemas / enums / utils
-services / agents / db → core
+         ↘ agents / messaging / schemas / enums / utils
+services / agents / db / messaging → core
 ```
 
 ## 必须遵守
@@ -20,6 +20,7 @@ services / agents / db → core
 - URL 工具在 `app/core/db_url.py`；`core` 禁止 `import app.db`
 - Auth Redis key（`refresh_token_key`）在 `core.security`，不要放进 `db`
 - Agent 编排在 `app/agents/`，由 service 触发，不直接挂路由
+- RabbitMQ 在 `app/messaging/`；只依赖 `core`，不写业务 dispatch
 
 ## 参考
 

@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -33,6 +34,13 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: str = ""
 
+    # RabbitMQ（云 Docker，经 .env 连接）
+    rabbitmq_host: str
+    rabbitmq_port: int = 5672
+    rabbitmq_user: str
+    rabbitmq_password: str = ""
+    rabbitmq_vhost: str = "/"
+
     # JWT
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -63,6 +71,17 @@ class Settings(BaseSettings):
         """组装 Redis URL。"""
         auth = f":{self.redis_password}@" if self.redis_password else ""
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def rabbitmq_url(self) -> str:
+        """组装 AMQP URL（密码与 vhost 做 URL 编码）。"""
+        user = quote(self.rabbitmq_user, safe="")
+        password = quote(self.rabbitmq_password, safe="")
+        vhost = quote(self.rabbitmq_vhost, safe="")
+        return (
+            f"amqp://{user}:{password}"
+            f"@{self.rabbitmq_host}:{self.rabbitmq_port}/{vhost}"
+        )
 
 
 @lru_cache

@@ -11,19 +11,22 @@ from app.core.logging import setup_logging
 from app.core.settings import settings
 from app.db.redis import redis_client
 from app.db.session import engine
+from app.messaging import connect as rabbitmq_connect
+from app.messaging import disconnect as rabbitmq_disconnect
+from app.messaging import ping as rabbitmq_ping
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """应用生命周期：启动时探测数据库与 Redis，关闭时释放连接。"""
+    """应用生命周期：启动时探测数据库、Redis、RabbitMQ，关闭时释放连接。"""
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        logger.info("数据库连接成功")
+        logger.info("postgres连接成功")
     except Exception:
-        logger.exception("数据库连接失败")
+        logger.exception("postgres连接失败")
         raise
 
     try:
@@ -33,8 +36,17 @@ async def lifespan(_app: FastAPI):
         logger.exception("Redis 连接失败")
         raise
 
+    try:
+        await rabbitmq_connect()
+        await rabbitmq_ping()
+        logger.info("RabbitMQ 连接成功")
+    except Exception:
+        logger.exception("RabbitMQ 连接失败")
+        raise
+
     yield
 
+    await rabbitmq_disconnect()
     await redis_client.aclose()
     await engine.dispose()
     logger.info("连接池已释放")

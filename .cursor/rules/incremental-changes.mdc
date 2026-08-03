@@ -24,7 +24,7 @@ alwaysApply: true
 
 ## 应当
 
-- 对齐现有分层：`api` / `agents` / `core` / `db` / `models` / `schemas` / `services` / `repositories`
+- 对齐现有分层：`api` / `agents` / `messaging` / `core` / `db` / `models` / `schemas` / `services` / `repositories`
 - 复用已有 `settings`、`get_db`、`Base`、路由挂载方式
 - 小步提交式改动：补全空文件、修局部、加新模块时挂到现有 router
 - 不确定意图时先问，而不是整目录重构
