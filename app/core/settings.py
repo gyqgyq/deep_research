@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.db.url import normalize_database_url
+from app.core.db_url import normalize_database_url
 
 # 项目根目录（backend/）
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

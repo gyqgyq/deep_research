@@ -8,8 +8,3 @@ redis_client: Redis = Redis.from_url(
     settings.redis_url,
     decode_responses=True,
 )
-
-
-def refresh_token_key(jti: str) -> str:
-    """Refresh Token 在 Redis 中的键。"""
-    return f"auth:refresh:{jti}"

@@ -8,8 +8,9 @@ app/
   api/                 # HTTP 层
     deps.py            # 依赖注入（如 get_db）
     v1/                # /api/v1 路由
-  core/                # 配置、日志
-  db/                  # 引擎、会话、ORM Base
+  agents/              # Agent 运行时编排（当前为空壳）
+  core/                # 配置、安全、日志、领域异常
+  db/                  # 引擎、会话、ORM Base、Redis 客户端
   models/              # SQLAlchemy 模型
   schemas/             # Pydantic 请求/响应
   services/            # 业务逻辑

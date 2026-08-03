@@ -1,0 +1,13 @@
+---
+description: 改 app 代码前先读对应 AGENTS.md
+globs: app/**/*
+alwaysApply: false
+---
+
+# 模块文档优先
+
+修改 `app/` 下代码时：
+
+1. 先打开仓库根目录 `AGENTS.md` 确认分层
+2. 再打开当前模块目录的 `AGENTS.md`（如 `app/services/AGENTS.md`）
+3. 按该文档的职责 / 约定 / 禁止项实现，避免跨层写逻辑

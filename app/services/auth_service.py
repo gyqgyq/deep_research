@@ -2,16 +2,16 @@
 
 from uuid import uuid4
 
-from fastapi import HTTPException, status
 from jwt.exceptions import InvalidTokenError
 from redis.asyncio import Redis
 
+from app.core.exceptions import ConflictError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    refresh_token_key,
 )
-from app.db.redis import refresh_token_key
 from app.models import Users
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth_schema import (
@@ -56,13 +56,10 @@ class AuthService:
         )
 
     async def register(self, request: RegisterRequest) -> tuple[TokenResponse, str, int]:
-        """注册并登录；用户名冲突返回 409。"""
+        """注册并登录；用户名冲突抛 ConflictError。"""
         existing = await self._repository.get_by_username(request.username)
         if existing is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="用户名已存在",
-            )
+            raise ConflictError("用户名已存在")
 
         user = Users(
             id=str(uuid4()),
@@ -74,55 +71,37 @@ class AuthService:
         return await self._issue_tokens(created)
 
     async def login(self, request: LoginRequest) -> tuple[TokenResponse, str, int]:
-        """登录；失败统一 401。"""
+        """登录；失败统一 UnauthorizedError。"""
         user = await self._repository.get_by_username(request.username)
         if user is None or not verify_password(request.password, user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户名或密码错误",
-            )
+            raise UnauthorizedError("用户名或密码错误")
         return await self._issue_tokens(user)
 
     async def refresh(self, refresh_token: str | None) -> tuple[TokenResponse, str, int]:
         """校验并轮转 Refresh Token。"""
         if not refresh_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="缺少 refresh token",
-            )
+            raise UnauthorizedError("缺少 refresh token")
 
         try:
             payload = decode_token(refresh_token, expected_type="refresh")
         except InvalidTokenError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="refresh token 无效",
-            ) from None
+            raise UnauthorizedError("refresh token 无效") from None
 
         jti = payload.get("jti")
         user_id = payload["sub"]
         if not jti:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="refresh token 无效",
-            )
+            raise UnauthorizedError("refresh token 无效")
 
         stored_user_id = await self._redis.get(refresh_token_key(jti))
         if stored_user_id is None or stored_user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="refresh token 已失效",
-            )
+            raise UnauthorizedError("refresh token 已失效")
 
         # 轮转：先吊销旧 jti
         await self._redis.delete(refresh_token_key(jti))
 
         user = await self._repository.get_by_id(user_id)
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户不存在",
-            )
+            raise UnauthorizedError("用户不存在")
         return await self._issue_tokens(user)
 
     async def logout(self, refresh_token: str | None) -> None:
@@ -141,8 +120,5 @@ class AuthService:
         """获取当前用户。"""
         user = await self._repository.get_by_id(user_id)
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户不存在",
-            )
+            raise UnauthorizedError("用户不存在")
         return self._to_public(user)

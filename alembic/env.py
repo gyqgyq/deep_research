@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+from app.core.db_url import database_connect_args, database_url_for_engine
 from app.core.settings import settings
 from app.db.base import Base
-from app.db.url import database_connect_args, database_url_for_engine
 
 # 导入 models，供 autogenerate 发现表结构
 import app.models  # noqa: F401

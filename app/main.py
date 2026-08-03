@@ -1,10 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.v1.router import api_router
+from app.core.exceptions import AppError
 from app.core.logging import setup_logging
 from app.core.settings import settings
 from app.db.redis import redis_client
@@ -47,6 +49,15 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         lifespan=lifespan,
     )
+
+    @app.exception_handler(AppError)
+    async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+        """将领域异常转为 HTTP JSON 响应。"""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.message},
+        )
+
     app.include_router(api_router, prefix=settings.api_v1_prefix)
     return app
 

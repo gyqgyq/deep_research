@@ -2,5 +2,5 @@
 
 - ``from app.db.base import Base``
 - ``from app.db.session import get_db, engine``
-- ``from app.db.url import normalize_database_url``
+- ``from app.db.redis import redis_client``
 """

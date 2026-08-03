@@ -56,3 +56,8 @@ def decode_token(token: str, *, expected_type: TokenType) -> dict[str, Any]:
     if not payload.get("sub"):
         raise InvalidTokenError("missing subject")
     return payload
+
+
+def refresh_token_key(jti: str) -> str:
+    """Refresh Token 在 Redis 中的键。"""
+    return f"auth:refresh:{jti}"

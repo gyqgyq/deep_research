@@ -1,0 +1,27 @@
+---
+description: 分层依赖方向与边界约定
+alwaysApply: true
+---
+
+# 架构边界
+
+依赖方向：
+
+```text
+api → services → repositories → models → db.base
+         ↘ agents / schemas / enums / utils
+services / agents / db → core
+```
+
+## 必须遵守
+
+- Service 抛 `AppError` 族（`app/core/exceptions.py`），不要 `HTTPException`
+- `HTTPException` 仅用于 `api` 层（含 `deps.py`）
+- URL 工具在 `app/core/db_url.py`；`core` 禁止 `import app.db`
+- Auth Redis key（`refresh_token_key`）在 `core.security`，不要放进 `db`
+- Agent 编排在 `app/agents/`，由 service 触发，不直接挂路由
+
+## 参考
+
+- 根目录 `AGENTS.md`
+- 改动目录下的模块级 `AGENTS.md`

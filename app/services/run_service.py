@@ -4,8 +4,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
-from fastapi import HTTPException, status
-
+from app.core.exceptions import NotFoundError
 from app.enums import RunStatus
 from app.models import AgentRuns
 from app.repositories.run_repository import RunRepository
@@ -62,13 +61,10 @@ class RunService:
         )
 
     async def get_run(self, org_id: str, run_id: str) -> RunGetRequest:
-        """按租户查询 run，不存在则 404。"""
+        """按租户查询 run，不存在则 NotFoundError。"""
         run = await self._repository.get_by_id(org_id, run_id)
         if run is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="run 不存在",
-            )
+            raise NotFoundError("run 不存在")
 
         input_data = run.input_json or {}
         return RunGetRequest(
