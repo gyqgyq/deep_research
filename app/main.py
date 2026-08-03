@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.logging import setup_logging
 from app.core.settings import settings
+from app.db.redis import redis_client
 from app.db.session import engine
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """应用生命周期：启动时探测数据库，关闭时释放连接池。"""
+    """应用生命周期：启动时探测数据库与 Redis，关闭时释放连接。"""
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
@@ -22,9 +23,19 @@ async def lifespan(_app: FastAPI):
     except Exception:
         logger.exception("数据库连接失败")
         raise
+
+    try:
+        await redis_client.ping()
+        logger.info("Redis 连接成功")
+    except Exception:
+        logger.exception("Redis 连接失败")
+        raise
+
     yield
+
+    await redis_client.aclose()
     await engine.dispose()
-    logger.info("数据库连接池已释放")
+    logger.info("连接池已释放")
 
 
 def create_app() -> FastAPI:

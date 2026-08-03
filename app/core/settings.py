@@ -27,6 +27,21 @@ class Settings(BaseSettings):
     async_database_url: str
     dashscope_api_key: str
 
+    # Redis
+    redis_host: str
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: str = ""
+
+    # JWT
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    jwt_access_expire_minutes: int = 15
+    jwt_refresh_expire_days: int = 7
+
+    # Refresh Cookie：生产环境应开启 Secure
+    cookie_secure: bool | None = None
+
     @field_validator("async_database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
@@ -35,6 +50,19 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def refresh_cookie_secure(self) -> bool:
+        """Cookie Secure 标志：显式配置优先，否则生产环境为 True。"""
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.is_production
+
+    @property
+    def redis_url(self) -> str:
+        """组装 Redis URL。"""
+        auth = f":{self.redis_password}@" if self.redis_password else ""
+        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
 
 @lru_cache
