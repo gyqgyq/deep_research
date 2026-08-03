@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from app.api.deps import get_run_service
-from app.schemas.run_schema import RunCreateRequest, RunCreateResponse, RunGetRequest
+from app.schemas.run_schema import RunCreateRequest, RunCreateResponse, RunGetResponse
 from app.services.run_service import RunService
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -17,12 +17,13 @@ async def runs_create(
     return await service.create_run(request)
 
 
-@router.get("/{run_id}", response_model=RunGetRequest)
+@router.get("/{run_id}", response_model=RunGetResponse)
 async def runs_get(
-    request: RunGetRequest,
-) -> RunGetRequest:
+    run_id: str = Path(..., description="任务ID"),
+    service: RunService = Depends(get_run_service),
+) -> RunGetResponse:
     """查询 Run。"""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="尚未实现")
+    return await service.get_run(run_id)
 
 
 @router.get("/{run_id}/events")

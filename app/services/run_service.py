@@ -14,8 +14,8 @@ from app.utils.hash import string2hash
 from app.schemas.run_schema import (
     RunCreateRequest,
     RunCreateResponse,
-    RunGetRequest,
-    RunGetRequestInput,
+    RunGetResponse,
+    RunGetResponseInput,
 )
 
 
@@ -57,8 +57,6 @@ class RunService:
                     "message": "该幂等键已被其他不同的请求入参占用使用",
                 }
             )
-            
-
 
         run = AgentRuns(
             id=str(uuid4()),
@@ -78,18 +76,18 @@ class RunService:
             created_at=created.created_at,
         )
 
-    async def get_run(self, org_id: str, run_id: str) -> RunGetRequest:
-        """按租户查询 run，不存在则 NotFoundError。"""
-        run = await self._repository.get_by_id(org_id, run_id)
+    async def get_run(self, run_id: str) -> RunGetResponse:
+        """按 run_id 查询 run，不存在则 NotFoundError。"""
+        run = await self._repository.get_run_by_id(run_id)
         if run is None:
             raise NotFoundError("run 不存在")
 
         input_data = run.input_json or {}
-        return RunGetRequest(
+        return RunGetResponse(
             run_id=run.id,
             status=RunStatus(run.status),
             run_type=run.run_type,
-            input=RunGetRequestInput(
+            input=RunGetResponseInput(
                 ticket_id=str(input_data.get("ticket_id", "")),
                 order_id=str(input_data.get("order_id", "")),
             ),

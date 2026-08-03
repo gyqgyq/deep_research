@@ -26,17 +26,17 @@ class RunCreateResponse(BaseModel):
     run_type: str = Field(..., description="任务类型")
     created_at: datetime = Field(..., description="任务创建时间")
 
-class RunGetRequestInput(BaseModel):
+class RunGetResponseInput(BaseModel):
     """获取agent任务参数"""
     ticket_id: str = Field(..., description="工单ID")
     order_id: str = Field(..., description="订单ID")
 
-class RunGetRequest(BaseModel):
+class RunGetResponse(BaseModel):
     """获取agent任务响应"""
     run_id: str = Field(..., description="任务ID")
     status: RunStatus = Field(..., description="任务状态")
     run_type: str = Field(..., description="任务类型")
-    input: RunGetRequestInput = Field(..., description="输入参数")
+    input: RunGetResponseInput = Field(..., description="输入参数")
     output: Optional[str] = Field(None, description="输出结果")
     error: Optional[str] = Field(None, description="错误信息")
     created_at: datetime = Field(..., description="任务创建时间")

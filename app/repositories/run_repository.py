@@ -19,10 +19,9 @@ class RunRepository:
         await self._session.refresh(run)
         return run
 
-    async def get_by_id(self, org_id: str, run_id: str) -> AgentRuns | None:
-        """按租户 + run_id 查询。"""
+    async def get_run_by_id(self, run_id: str) -> AgentRuns | None:
+        """按 run_id 查询。"""
         stmt = select(AgentRuns).where(
-            AgentRuns.org_id == org_id,
             AgentRuns.id == run_id,
         )
         result = await self._session.execute(stmt)
