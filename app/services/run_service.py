@@ -4,10 +4,13 @@ import json
 from typing import Any
 from uuid import uuid4
 
+from fastapi import HTTPException
+
 from app.core.exceptions import NotFoundError
 from app.enums import RunStatus
 from app.models import AgentRuns
 from app.repositories.run_repository import RunRepository
+from app.utils.hash import string2hash
 from app.schemas.run_schema import (
     RunCreateRequest,
     RunCreateResponse,
@@ -31,17 +34,31 @@ class RunService:
 
     async def create_run(self, request: RunCreateRequest) -> RunCreateResponse:
         """创建 run；同一 org 下相同幂等键返回已有记录。"""
-        # existing = await self._repository.get_by_idempotency_key(
-        #     request.org_id,
-        #     request.idempotency_key,
-        # )
-        # if existing is not None:
-        #     return RunCreateResponse(
-        #         run_id=existing.id,
-        #         status=RunStatus(existing.status),
-        #         run_type=existing.run_type,
-        #         created_at=existing.created_at,
-        #     )
+
+        request_hash = string2hash(request.input.model_dump_json())
+        existing = await self._repository.find_run_by_idempotency_key(
+            request.org_id,
+            request.idempotency_key,
+        )
+        if existing:
+            # 幂等键相同，输入也相同，这是安全重试，则返回已有记录。
+            if existing.request_hash == request_hash:
+                return RunCreateResponse(
+                    run_id=existing.id,
+                    status=RunStatus(existing.status),
+                    run_type=existing.run_type,
+                    created_at=existing.created_at,
+                )
+            # 幂等键相同，输入不同，调用方用同一个键去做另一件事，必须拒绝
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "CONFLICT",
+                    "message": "该幂等键已被其他不同的请求入参占用使用",
+                }
+            )
+            
+
 
         run = AgentRuns(
             id=str(uuid4()),
@@ -50,6 +67,7 @@ class RunService:
             run_type=request.run_type,
             status=RunStatus.QUEUED,
             idempotency_key=request.idempotency_key,
+            request_hash=request_hash,
             input_json=request.input.model_dump(),
         )
         created = await self._repository.create(run)

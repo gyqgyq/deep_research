@@ -27,6 +27,8 @@ class AgentRuns(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False)
     # 同一组织内业务请求去重键
     idempotency_key: Mapped[str] = mapped_column(Text, nullable=False)
+    # 请求入参哈希，用于幂等键冲突时区分是否同一请求
+    request_hash: Mapped[str] = mapped_column(Text, nullable=False)
     # 不同 run_type 可用不同结构，先用 JSONB 承载
     input_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     output_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)

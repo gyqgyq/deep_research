@@ -28,7 +28,7 @@ class RunRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_by_idempotency_key(
+    async def find_run_by_idempotency_key(
         self,
         org_id: str,
         idempotency_key: str,
