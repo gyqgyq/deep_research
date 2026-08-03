@@ -94,6 +94,7 @@ async def get_current_user(
 
 
 __all__ = [
+    "REFRESH_COOKIE_NAME",
     "get_db",
     "get_redis",
     "get_user_repository",

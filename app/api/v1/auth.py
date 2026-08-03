@@ -2,7 +2,12 @@
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import get_auth_service, get_current_user, get_refresh_token_from_cookie
+from app.api.deps import (
+    REFRESH_COOKIE_NAME,
+    get_auth_service,
+    get_current_user,
+    get_refresh_token_from_cookie,
+)
 from app.core.settings import settings
 from app.models import Users
 from app.schemas.auth_schema import (
@@ -15,7 +20,6 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-REFRESH_COOKIE_NAME = "refresh_token"
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
