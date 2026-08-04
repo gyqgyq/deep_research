@@ -32,9 +32,14 @@ class AgentSteps(Base):
     input_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     output_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     error_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    started_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+    # 步骤真正开始执行的时间；创建记录时可能尚未开始
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
