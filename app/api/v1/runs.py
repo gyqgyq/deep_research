@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status, Body
 
 from app.api.deps import CurrentUser, get_run_service
-from app.schemas.run_schema import RunCreateRequest, RunCreateResponse, RunGetResponse
+from app.schemas.run_schema import (
+    RunCreateRequest, 
+    RunCreateResponse, 
+    RunGetResponse, 
+    RunCancelRequest,
+)
 from app.services.run_service import RunService
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -34,9 +39,14 @@ async def runs_events(run_id: str) -> dict:
 
 
 @router.post("/{run_id}/cancel")
-async def runs_cancel(run_id: str) -> dict:
-    """取消 Run（业务未实现）。"""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="尚未实现")
+async def runs_cancel(
+    user: CurrentUser,
+    run_id: str = Path(..., description="任务ID"),
+    service: RunService = Depends(get_run_service),
+    request: RunCancelRequest = Body(..., description="取消请求"),
+) -> dict:
+    """取消 Run"""
+    return await service.cancel_run(request, user, run_id)
 
 
 @router.post("/{run_id}/resume")

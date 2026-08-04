@@ -8,3 +8,11 @@ class RunStatus(StrEnum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+    @classmethod
+    def terminal_statuses(cls) -> list[str]:
+        return [
+            cls.SUCCEEDED,
+            cls.FAILED,
+            cls.CANCELLED,
+        ]

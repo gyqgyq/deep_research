@@ -17,6 +17,8 @@ from app.schemas.run_schema import (
     RunCreateResponse,
     RunGetResponse,
     RunGetResponseInput,
+    RunCancelRequest,
+    RunCancelResponse,
 )
 
 
@@ -70,6 +72,15 @@ class RunService:
             input_json=request.input.model_dump(),
         )
         created = await self._repository.create(run)
+
+        append_run_event(
+            run_id=created.id,
+            event_type='run.created',
+            paylod={
+                "status": created.status,
+            }
+        )
+
         return RunCreateResponse(
             run_id=created.id,
             status=RunStatus(created.status),
@@ -98,4 +109,51 @@ class RunService:
             created_at=run.created_at,
             updated_at=run.updated_at,
             ended_at=run.ended_at,
+        )
+
+    async def cancel_run(self, request: RunCancelRequest, user: CurrentUser, run_id: str) -> dict:
+        """取消 run"""
+        run = await self._repository.get_run_by_id_and_org(run_id, user.org_id)
+
+        if run is None or run.user_id != user.user_id:
+            raise NotFoundError("run 不存在")
+
+        if run.status in RunStatus.terminal_statuses():
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "CONFLICT",
+                    "message": "任务已结束，无法取消",
+                }
+            )
+
+        # 这里只是请求取消，真正停止由worker在安全点配合完成
+        # if run.status == RunStatus.RUNNING:
+        #     # 运行中不能由API直接改状态，work可能正在调用退款这类副作用工具
+        #     # API只写取消请求标记和事件，真正的running -> cancelled 由worker在安全点配合完成
+        #     mark_run_cancel_requested(
+        #         run_id=run_id,
+        #         requested_by=user.user_id,
+        #         reason=request.reason,
+        #     )
+        #     append_run_event(
+        #         run_id=run_id,
+        #         event_type='run.cancel_requested',
+        #         paylod={
+        #             "reason": request.reason,
+        #         }
+        #     )
+        # else:
+        #     # queued / waiting_for_user 还没有worker在执行，可以直接进入cancelled状态
+        #     transition_run(
+        #         run_id=run_id,
+        #         to_status=RunStatus.CANCELLED,
+        #         reason=request.reason,
+        #         actor_type="user",
+        #         actor_id=user.user_id,
+        #     )
+
+        return RunCancelResponse(
+            run_id=run_id,
+            status=RunStatus.CANCELLED,
         )
