@@ -50,13 +50,10 @@ class RunCancelResponse(BaseModel):
     run_id: str = Field(..., description="任务ID")
     status: RunStatus = Field(..., description="任务状态")
 
-class RunResumeInput(BaseModel):
-    """用户补充后，恢复agent任务参数"""
-    user_message: str = Field(..., description="用户消息")
-
 class RunResumeRequest(BaseModel):
-    """用户补充后，恢复agent任务请求"""
-    user_input: RunResumeInput = Field(..., description="用户输入")
+    """用户补充后，恢复agent任务"""
+    input: str = Field(..., description="用户输入")
+    resume_token: str = Field(..., description="恢复令牌")
 
 class RunResumeResponse(BaseModel):
     """用户补充后，恢复agent任务响应"""

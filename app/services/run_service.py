@@ -19,6 +19,8 @@ from app.schemas.run_schema import (
     RunGetResponseInput,
     RunCancelRequest,
     RunCancelResponse,
+    RunResumeRequest,
+    RunResumeResponse,
 )
 
 
@@ -73,13 +75,16 @@ class RunService:
         )
         created = await self._repository.create(run)
 
-        append_run_event(
-            run_id=created.id,
-            event_type='run.created',
-            paylod={
-                "status": created.status,
-            }
-        )
+        # append_run_event(
+        #     run_id=created.id,
+        #     event_type='run.created',
+        #     paylod={
+        #         "status": created.status,
+        #     }
+        # )
+
+        # Outbox Pattenr，避免写库成功但入队失败
+        # enqueue_run(created.id)
 
         return RunCreateResponse(
             run_id=created.id,
@@ -156,4 +161,52 @@ class RunService:
         return RunCancelResponse(
             run_id=run_id,
             status=RunStatus.CANCELLED,
+        )
+
+
+    async def resume_run(self, request: RunResumeRequest, user: CurrentUser, run_id: str) -> RunResumeResponse:
+        """恢复 run"""
+        run = await self._repository.get_run_by_id_and_org(run_id, user.org_id)
+
+        if run is None or run.user_id != user.user_id:
+            raise NotFoundError("run 不存在")
+
+        # 只有 waiting_for_user 可以恢复，其他状态恢复会破坏状态机
+        if run.status != RunStatus.WAITING_FOR_USER:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "CONFLICT",
+                    "message": "只有等待用户确认的任务可以恢复",
+                }
+            )
+
+        # token校验用于确认这次resume对应的是正确的等待点
+        # validate_resume_permission(
+        #     run=run,
+        #     user=user,
+        #     resume_token=request.resume_token,
+        # )
+
+        # 恢复时重新进入queue，等待dispatch重新调度
+        run = mark_run_queue_for_resume(
+            run_id=run_id,
+            resume_input=request.input,
+        )
+
+        # 写事件后，前端事件流才能看到run被恢复
+        # append_run_event(
+        #     run_id=run_id,
+        #     event_type='run.resumed',
+        #     paylod={
+        #         "resumed_by": user.user_id,
+        #     }
+        # )
+
+        # 可靠投递
+        # enqueue_run(run_id)
+
+        return RunResumeResponse(
+            run_id=run_id,
+            status=RunStatus(run.status),
         )
