@@ -1,3 +1,3 @@
-from .run_enum import RunStatus
+from .run_enum import RunEventType, RunStatus
 
-__all__ = ["RunStatus"]
+__all__ = ["RunEventType", "RunStatus"]

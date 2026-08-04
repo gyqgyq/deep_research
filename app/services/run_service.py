@@ -5,8 +5,8 @@ from typing import Any
 from uuid import uuid4
 
 from app.core.exceptions import ConflictError, NotFoundError
-from app.enums import RunStatus
-from app.models import AgentRuns, Users
+from app.enums import RunEventType, RunStatus
+from app.models import AgentRuns, RunEvents, Users
 from app.repositories.run_repository import RunRepository
 from app.schemas.run_schema import (
     RunCancelRequest,
@@ -54,8 +54,9 @@ class RunService:
             # 幂等键相同，输入不同，调用方用同一个键去做另一件事，必须拒绝
             raise ConflictError("该幂等键已被其他不同的请求入参占用使用")
 
+        run_id = str(uuid4())
         run = AgentRuns(
-            id=str(uuid4()),
+            id=run_id,
             org_id=user.org_id,
             user_id=user.id,
             run_type=request.run_type,
@@ -64,17 +65,20 @@ class RunService:
             request_hash=request_hash,
             input_json=request.input.model_dump(),
         )
-        created = await self._repository.create(run)
+        run_event = RunEvents(
+            id=str(uuid4()),
+            run_id=run_id,
+            sequence=1,
+            event_type=RunEventType.CREATED,
+            payload_json={"status": RunStatus.QUEUED},
+        )
+        # 同会话一次写入；由 get_db 在请求结束时统一 commit/rollback
+        created = await self._repository.create(
+            run,
+            run_event,
+        )
 
-        # append_run_event(
-        #     run_id=created.id,
-        #     event_type='run.created',
-        #     paylod={
-        #         "status": created.status,
-        #     }
-        # )
-
-        # Outbox Pattenr，避免写库成功但入队失败
+        # Outbox Pattern，避免写库成功但入队失败
         # enqueue_run(created.id)
 
         return RunCreateResponse(

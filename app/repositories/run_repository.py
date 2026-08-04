@@ -1,20 +1,21 @@
-"""AgentRuns 数据访问层。"""
+"""AgentRuns / RunEvents 数据访问层。"""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AgentRuns
+from app.models import AgentRuns, RunEvents
 
 
 class RunRepository:
-    """agent_runs 表访问。Service 仅通过本类访问数据库。"""
+    """agent_runs / run_events 表访问。Service 仅通过本类访问数据库。"""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, run: AgentRuns) -> AgentRuns:
-        """插入一条 run，并 flush 以拿到数据库默认值。"""
+    async def create(self, run: AgentRuns, event: RunEvents) -> AgentRuns:
+        """同会话一次 flush 插入 run 与首条事件。"""
         self._session.add(run)
+        self._session.add(event)
         await self._session.flush()
         await self._session.refresh(run)
         return run

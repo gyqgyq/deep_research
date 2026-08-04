@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class RunStatus(StrEnum):
     """任务状态"""
     QUEUED = "queued"
@@ -16,3 +17,10 @@ class RunStatus(StrEnum):
             cls.FAILED,
             cls.CANCELLED,
         ]
+
+
+class RunEventType(StrEnum):
+    """Run 事件类型。"""
+    CREATED = "run.created"
+    CANCEL_REQUESTED = "run.cancel_requested"
+    RESUMED = "run.resumed"
