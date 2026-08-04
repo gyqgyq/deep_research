@@ -4,24 +4,21 @@ import json
 from typing import Any
 from uuid import uuid4
 
-from fastapi import HTTPException
-
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.enums import RunStatus
-from app.models import AgentRuns
+from app.models import AgentRuns, Users
 from app.repositories.run_repository import RunRepository
-from app.utils.hash import string2hash
-from app.api.deps import CurrentUser
 from app.schemas.run_schema import (
+    RunCancelRequest,
+    RunCancelResponse,
     RunCreateRequest,
     RunCreateResponse,
     RunGetResponse,
     RunGetResponseInput,
-    RunCancelRequest,
-    RunCancelResponse,
     RunResumeRequest,
     RunResumeResponse,
 )
+from app.utils.hash import string2hash
 
 
 def _json_to_optional_str(value: dict[str, Any] | None) -> str | None:
@@ -37,7 +34,7 @@ class RunService:
     def __init__(self, repository: RunRepository) -> None:
         self._repository = repository
 
-    async def create_run(self, request: RunCreateRequest, user: CurrentUser) -> RunCreateResponse:
+    async def create_run(self, request: RunCreateRequest, user: Users) -> RunCreateResponse:
         """创建 run；同一 org 下相同幂等键返回已有记录。"""
 
         request_hash = string2hash(request.input.model_dump_json())
@@ -55,18 +52,12 @@ class RunService:
                     created_at=existing.created_at,
                 )
             # 幂等键相同，输入不同，调用方用同一个键去做另一件事，必须拒绝
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "CONFLICT",
-                    "message": "该幂等键已被其他不同的请求入参占用使用",
-                }
-            )
+            raise ConflictError("该幂等键已被其他不同的请求入参占用使用")
 
         run = AgentRuns(
             id=str(uuid4()),
             org_id=user.org_id,
-            user_id=user.user_id,
+            user_id=user.id,
             run_type=request.run_type,
             status=RunStatus.QUEUED,
             idempotency_key=request.idempotency_key,
@@ -116,21 +107,20 @@ class RunService:
             ended_at=run.ended_at,
         )
 
-    async def cancel_run(self, request: RunCancelRequest, user: CurrentUser, run_id: str) -> dict:
+    async def cancel_run(
+        self,
+        request: RunCancelRequest,
+        user: Users,
+        run_id: str,
+    ) -> RunCancelResponse:
         """取消 run"""
         run = await self._repository.get_run_by_id_and_org(run_id, user.org_id)
 
-        if run is None or run.user_id != user.user_id:
+        if run is None or run.user_id != user.id:
             raise NotFoundError("run 不存在")
 
         if run.status in RunStatus.terminal_statuses():
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "CONFLICT",
-                    "message": "任务已结束，无法取消",
-                }
-            )
+            raise ConflictError("任务已结束，无法取消")
 
         # 这里只是请求取消，真正停止由worker在安全点配合完成
         # if run.status == RunStatus.RUNNING:
@@ -164,22 +154,21 @@ class RunService:
         )
 
 
-    async def resume_run(self, request: RunResumeRequest, user: CurrentUser, run_id: str) -> RunResumeResponse:
+    async def resume_run(
+        self,
+        request: RunResumeRequest,
+        user: Users,
+        run_id: str,
+    ) -> RunResumeResponse:
         """恢复 run"""
         run = await self._repository.get_run_by_id_and_org(run_id, user.org_id)
 
-        if run is None or run.user_id != user.user_id:
+        if run is None or run.user_id != user.id:
             raise NotFoundError("run 不存在")
 
         # 只有 waiting_for_user 可以恢复，其他状态恢复会破坏状态机
         if run.status != RunStatus.WAITING_FOR_USER:
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "CONFLICT",
-                    "message": "只有等待用户确认的任务可以恢复",
-                }
-            )
+            raise ConflictError("只有等待用户确认的任务可以恢复")
 
         # token校验用于确认这次resume对应的是正确的等待点
         # validate_resume_permission(
@@ -189,10 +178,10 @@ class RunService:
         # )
 
         # 恢复时重新进入queue，等待dispatch重新调度
-        run = mark_run_queue_for_resume(
-            run_id=run_id,
-            resume_input=request.input,
-        )
+        # run = mark_run_queue_for_resume(
+        #     run_id=run_id,
+        #     resume_input=request.input,
+        # )
 
         # 写事件后，前端事件流才能看到run被恢复
         # append_run_event(
