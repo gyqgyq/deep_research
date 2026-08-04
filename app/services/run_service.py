@@ -69,8 +69,8 @@ class RunService:
             id=str(uuid4()),
             run_id=run_id,
             sequence=1,
-            event_type=RunEventType.CREATED,
-            payload_json={"status": RunStatus.QUEUED},
+            event_type=RunEventType.CREATED.value,
+            payload_json={"status": RunStatus.QUEUED.value},
         )
         # 同会话一次写入；由 get_db 在请求结束时统一 commit/rollback
         created = await self._repository.create(

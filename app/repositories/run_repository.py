@@ -13,8 +13,12 @@ class RunRepository:
         self._session = session
 
     async def create(self, run: AgentRuns, event: RunEvents) -> AgentRuns:
-        """同会话一次 flush 插入 run 与首条事件。"""
+        """同事务插入 run 与首条事件。
+
+        需先 flush run：未声明 relationship 时，UOW 可能先插 run_events，触发外键失败。
+        """
         self._session.add(run)
+        await self._session.flush()
         self._session.add(event)
         await self._session.flush()
         await self._session.refresh(run)
