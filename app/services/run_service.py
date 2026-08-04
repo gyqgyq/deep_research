@@ -11,6 +11,7 @@ from app.enums import RunStatus
 from app.models import AgentRuns
 from app.repositories.run_repository import RunRepository
 from app.utils.hash import string2hash
+from app.api.deps import CurrentUser
 from app.schemas.run_schema import (
     RunCreateRequest,
     RunCreateResponse,
@@ -32,12 +33,12 @@ class RunService:
     def __init__(self, repository: RunRepository) -> None:
         self._repository = repository
 
-    async def create_run(self, request: RunCreateRequest) -> RunCreateResponse:
+    async def create_run(self, request: RunCreateRequest, user: CurrentUser) -> RunCreateResponse:
         """创建 run；同一 org 下相同幂等键返回已有记录。"""
 
         request_hash = string2hash(request.input.model_dump_json())
         existing = await self._repository.find_run_by_idempotency_key(
-            request.org_id,
+            user.org_id,
             request.idempotency_key,
         )
         if existing:
@@ -60,8 +61,8 @@ class RunService:
 
         run = AgentRuns(
             id=str(uuid4()),
-            org_id=request.org_id,
-            user_id=request.user_id,
+            org_id=user.org_id,
+            user_id=user.user_id,
             run_type=request.run_type,
             status=RunStatus.QUEUED,
             idempotency_key=request.idempotency_key,

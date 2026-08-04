@@ -9,12 +9,12 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RunCreateResponse)
 async def runs_create(
+    user: CurrentUser,
     request: RunCreateRequest,
     service: RunService = Depends(get_run_service),
-    # user: CurrentUser,
 ) -> RunCreateResponse:
     """创建 Run（支持幂等键去重）。"""
-    return await service.create_run(request)
+    return await service.create_run(request, user)
 
 
 @router.get("/{run_id}", response_model=RunGetResponse)
