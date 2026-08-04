@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ class AuditLogs(Base):
     """高风险动作审计日志（表 audit_logs）。"""
 
     __tablename__ = "audit_logs"
+    __table_args__ = (
+        # 审计日志按组织和时间检索
+        Index("idx_audit_logs_org_created", "org_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     org_id: Mapped[str] = mapped_column(Text, nullable=False)

@@ -15,6 +15,7 @@ class AgentSteps(Base):
 
     __tablename__ = "agent_steps"
     __table_args__ = (
+        # 唯一约束本身已带 (run_id, step_index) 索引，等价于按 run 拉取有序 step
         UniqueConstraint("run_id", "step_index", name="uq_agent_steps_run_step_index"),
     )
 

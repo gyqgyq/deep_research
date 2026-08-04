@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -13,6 +13,10 @@ class UsageRecords(Base):
     """账单、预算、限流与成本告警用的用量记录（表 usage_records）。"""
 
     __tablename__ = "usage_records"
+    __table_args__ = (
+        # 组织维度成本统计
+        Index("idx_usage_records_org_created", "org_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(

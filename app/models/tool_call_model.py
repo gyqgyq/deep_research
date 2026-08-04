@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,6 +16,10 @@ class ToolCalls(Base):
     __tablename__ = "tool_calls"
     __table_args__ = (
         UniqueConstraint("tool_name", "idempotency_key", name="uq_tool_calls_name_idempotency"),
+        # run 详情页查看工具调用历史
+        Index("idx_tool_calls_run_created", "run_id", "created_at"),
+        # 按工具名和状态排查失败率
+        Index("idx_tool_calls_tool_status", "tool_name", "status", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

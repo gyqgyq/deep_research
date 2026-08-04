@@ -15,6 +15,7 @@ class RunEvents(Base):
 
     __tablename__ = "run_events"
     __table_args__ = (
+        # 唯一约束本身已带 (run_id, sequence) 索引，等价于事件流按 sequence 读取
         UniqueConstraint("run_id", "sequence", name="uq_run_events_run_sequence"),
     )
 

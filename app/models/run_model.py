@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Index, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,6 +16,15 @@ class AgentRuns(Base):
     __tablename__ = "agent_runs"
     __table_args__ = (
         UniqueConstraint("org_id", "idempotency_key", name="uq_agent_runs_org_idempotency"),
+        # 组织维度 run 列表
+        Index(
+            "idx_agent_runs_org_created",
+            "org_id",
+            "created_at",
+            postgresql_ops={"created_at": "DESC"},
+        ),
+        # 按状态扫描 queued/running 等
+        Index("idx_agent_runs_status_created", "status", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

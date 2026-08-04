@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ class ModelCalls(Base):
     """每一次模型请求的落库记录（表 model_calls）。"""
 
     __tablename__ = "model_calls"
+    __table_args__ = (
+        # run 详情页查看模型调用历史
+        Index("idx_model_calls_run_created", "run_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(
